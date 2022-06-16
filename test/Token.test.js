@@ -4,7 +4,9 @@ const Token = artifacts.require("./Token");
 // Interesting way to import this
 require("chai").use(require("chai-as-promised")).should();
 
-contract("Token", ([deployer, sender, receiver]) => {
+// any new value added to the array which are the params of the anoymous function below
+  // can be any new addresses to send tokens from and to
+contract("Token", ([deployer, exchange, receiver]) => {
   // These are values to compare against by chai equals()
   const name = "My Token Name";
   const symbol = "MTN";
@@ -143,6 +145,104 @@ describe('failure', async() => {
       // a good test
     it('rejects invalid recipient', async() => {
       await token.transfer(0x0, amount, {from:deployer}).should.be.rejected
+    })
+})
+  })
+
+  describe('approving tokens', () => {
+    let result
+    let amount
+
+    // allowance() and approve() comments are on the Token.sol smart contract page.
+    beforeEach(async() => {
+      amount = tokens(100);
+      result = await token.approve(exchange, amount, { from: deployer })
+    })
+    describe('success', () => {
+      it('allocates an allowance for delegated token spending on exchange', async () => {
+        const allowance = await token.allowance(deployer, exchange)
+        allowance.toString().should.equal(amount.toString());
+      })
+
+      // Nearly identical wth minor changes from Transfer event
+      it('emits a Approval event', async () => {
+        const log = result.logs[0];
+        log.event.should.equal("Approval");
+        console.log(result.logs[0]);
+  
+        const argsObj = log.args;
+        argsObj.owner.should.equal(deployer, 'owner is correct');
+        argsObj.spender.should.equal(exchange,'spender is correct');
+        argsObj._value.toString().should.equal(amount,'value allowed is correct');
+    })
+    })
+
+    describe('failure', () => {
+      it('rejects invalid spenders', async () => {
+        await token.approve(0x0, amount, {from: deployer}).should.be.rejected
+      })
+    })
+  })
+
+  describe('delegate token transfers -> transferFrom()', () => {
+    let amount
+    let result
+
+    beforeEach(async () => {
+      // moved amount into here so that it could be approved into exchange
+      // Approves 100 tokens
+      amount = tokens(100);
+      await token.approve(exchange,amount, {from: deployer})
+    })
+
+    describe('success', async () => {
+      // exchange is doing this transferFrom() function and completing the transaction 
+        // of deployer to receiver
+    beforeEach(async () => {
+        result = await token.transferFrom(deployer, receiver, amount, {from: exchange});
+    })
+
+    it('transferFrom() method transfers token balances', async () => {
+     //After Transfer
+      let balanceOf
+      balanceOf = await token.balanceOf(deployer)
+      balanceOf.toString().should.equal(tokens(999900));
+      balanceOf = await token.balanceOf(receiver)
+      balanceOf.toString().should.equal(tokens(100));
+    })
+
+    it('resets allowance', async () => {
+      // returns amount exchange is allowed to withdraw from deployer, is reset from transferFrom() method
+      const allowance = await token.allowance(deployer,exchange);
+      allowance.toString().should.equal('0');
+    })
+
+    it('emits a Transfer event', async () => {
+
+      // Run test to make sure that logs event is Transfer
+      const log = result.logs[0];
+      log.event.should.equal("Transfer");
+      console.log(result.logs[0]);
+
+      const argsObj = log.args;
+      argsObj.from.should.equal(deployer, 'from is correct');
+      argsObj.to.should.equal(receiver,'to is correct');
+      argsObj.value.toString().should.equal(amount,'value transferred is correct');
+  })
+})
+
+describe('failure', async() => {
+  it('rejects insufficient amounts', async () => {
+    // Should Pass This -> Tests transfer from deployer to receiver using exchange
+      // deployer curAmt = 1 Million
+      // This test also tests only to the max amount of approved tokens to the exchange.
+      // Since there is only 100 approved tokens, any number above it will make this test pass
+    let invalidAmount = tokens(50) // This is 100 million 
+      await token.transferFrom(receiver,deployer,invalidAmount,{ from:exchange })
+      .should.be.rejectedWith(EVM_REVERT)
+    })
+    it('rejects invalid recipient/receiver', async() => {
+      await token.transferFrom(deployer, 0x0, amount, {from:exchange}).should.be.rejected
     })
 })
   })
