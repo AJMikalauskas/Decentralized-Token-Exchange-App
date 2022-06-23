@@ -6,7 +6,7 @@ pragma solidity >=0.4.21 <0.9.0;
 // Handle Trades - Charge Gas Fees/Fees
     // TODO:
     //? [1] Set the fee/fee account
-    //? [] Deposit Ether
+    //? [3] Deposit Ether
     //? [] Withdraw Ether
     //? [2] Deposit tokens
     //? [] Withdraw tokens
@@ -27,6 +27,8 @@ contract Exchange {
     // Variables
     address public feeAccount; // the account that receives exchange fees
     uint256 public feePercent; // the fee percentage, lower on most exchanges, but we'll use 10%
+    address constant ETHER = address(0); // ETHER address will never change, Ether has no address so we set as dummy address for tokens;
+        // store Ether in tokens mapping with blank address
     //mapping which is internal tracking mechanism to determine which token deposited, amoutn deposited, and who they belong to
         // nested mapping like allowance in Token.sol -> 1st key address is all tokens deposited(types and more),
             // 2nd key is address of user who deposited tokens themselves, show their balances of the specific token
@@ -43,10 +45,35 @@ contract Exchange {
         feePercent = _feePercent;
     }
 
+    // Fallback Function: reverts if Ether is sent to this smart contract by mistake
+        // fallback function only called if if a function you call within a smart contract doesn't exist ->
+            // see fallback test for more understanding
+    function() external{
+        revert();
+    }
+
+    // Create ability to deposit Ether just not via the depositToken() method
+        // Similar to depositToken() except depositToken uses tokens while ether is not a token
+            // reduce amount of storage used by blockchain by using internal mapping storage of tokens; 
+                // ether has no address but we will create functionality to where an empty address is ether in the tokens variable
+    // Need payable function name modifier to accept ether in with metadata.
+    function depositEther() payable public {
+        // I think statement will be change later as he explains how to add ether as amount; can't be passed in as param as seen below
+            // can pass in ether as metadata which using the value property in tests not the from property. 
+                // Sets nested mapping of token for ether of the msg.sender equal to the specific token for the ETHER address with 
+                    // ether being added. Will include amount from depositToken() method 
+        tokens[ETHER][msg.sender] = tokens[ETHER][msg.sender].add(msg.value);
+        // Also, emit deposit event -> change token param to ETHER, amount param to msg.value, and balance to the ETHER balance of tokens mapping
+        emit Deposit(ETHER, msg.sender, msg.value, tokens[ETHER][msg.sender]);
+
+    }
+
     // Can deposit token import from above and any token as long as it follows
         // ERC-20 format
     function depositToken(address _token, uint _amount) public
     {
+        //Don't allow Ether Deposits
+        require(_token != ETHER);
         // Which Token? -> do so by adding address _token in params, deposits token on ethereum
         // How much? -> do so by defining _amount in params
         // Send tokens to this contract
