@@ -7,10 +7,10 @@ pragma solidity >=0.4.21 <0.9.0;
     // TODO:
     //? [1] Set the fee/fee account
     //? [3] Deposit Ether
-    //? [] Withdraw Ether
+    //? [4] Withdraw Ether
     //? [2] Deposit tokens
-    //? [] Withdraw tokens
-    //? [] Check Balances 
+    //? [5] Withdraw tokens
+    //? [6] Check Balances 
     //? [] Make order
     //? [] Cancel order
     //? [] Fill order
@@ -36,7 +36,8 @@ contract Exchange {
 
     // Deposit event emitted, defining params here
     event Deposit(address token, address user, uint256 amount, uint256 balance);
-
+    // Withdraw event emitted, defining params here
+    event Withdraw(address token, address user, uint amount, uint balance);
 
     // create feeAccount in () of constructor -> see Exchange.test.js
     constructor(address _feeAccount, uint256 _feePercent) public {
@@ -68,6 +69,22 @@ contract Exchange {
 
     }
 
+    // Withdraw ether functionality
+        // Do Opposite of what we did when depositing ether
+    function withdrawEther(uint _amount) payable public {
+        // Can't ask to withdraw more than ether than a specific user address has in tokens mapping ->
+            // can't ask to withdraw 100 ether and only have 1 in tokens mapping -> test this as failure case
+                // this should be rejected with error if user tries to withdraw more than they have 
+        require(tokens[ETHER][msg.sender] >= _amount);
+        // Test this in new describe('withdrawing ether') -> describe('success') -> it("withdraws Ether funds");
+        tokens[ETHER][msg.sender] = tokens[ETHER][msg.sender].sub(_amount);
+        //Return ether back to original user -> is this from or not from the Token.sol smart contract?, I would 
+            // assume not since it doesn't follow the 2 parameters that it should have if it was from Token.sol smart contract
+        //! View this link to see address.transfer() in use: 
+            //! https://medium.com/daox/three-methods-to-transfer-funds-in-ethereum-by-means-of-solidity-5719944ed6e9 
+        msg.sender.transfer(_amount);
+        emit Withdraw(ETHER, msg.sender, _amount, tokens[ETHER][msg.sender]);
+    }
 
     // Can deposit token import from above and any token as long as it follows
         // ERC-20 format
@@ -103,5 +120,33 @@ contract Exchange {
                 // token, user, amount, balance
         emit Deposit(_token, msg.sender, _amount, tokens[_token][msg.sender]);
     }
+    function withdrawToken(address _token, uint256 _amount) public{
+        // Don't allow Ether Withdraws via this function -> use withdraw ether function if ether address
+            // The order of these require() method checks allows for ether address checks in failure tests
+                // to no fail on the insufficeint amount but on the incorrect address
+        require(_token != ETHER);
+        // Can't withdraw a token amount more than what is in the specific tokens mapping for the specific token for the specific user address 
+        require(tokens[_token][msg.sender] >= _amount);
+        // Explanation of 2 lines below:
+            // Interesting concept, we’re returning the tokens back to the specific user address(or msg.sender/user1 in testing) 
+                // because they’re withdrawing tokens. I think that this gives back tokens to the specific user address; 
+                    //while the exchange smart contract has its tokens mapping(internal storing mechanism for exchange) 
+                        // loses the tokens from the specific user address on the exchange.
+        // This transfer method should return true -> and returns the tokens to the user address
+        require(Token(_token).transfer(msg.sender, _amount));
 
+        // subtract the token amount from the tokens mappping sotring the specific tokens that the specific user address has
+        tokens[_token][msg.sender] = tokens[_token][msg.sender].sub(_amount);
+
+        //emit withdraw event similarly to withdrawEther() method
+        emit Withdraw(_token, msg.sender, _amount, tokens[_token][msg.sender]);
+    }
+
+    // Check Balance Function -> reader function essentially due to view keyword?
+    function balanceOf(address _token, address _user) public view returns(uint256)
+    {
+        // Just returns tokens mapping balance of specific token for specific user address
+        // Create 2 dummy tests for checking balance of ether and our token in tokens mapping
+        return tokens[_token][_user];
+    }
 }

@@ -80,8 +80,52 @@ contract("Exchange", ([deployer, feeAccount, user1]) => {
   })
   })
 
+  describe('withdrawing Ether', async() => {
+    let result
+    let amount = ether(1);
+    // This allows you to subtract ether from token mapping of ether since there is now actually a balance of ether
+    beforeEach(async() => {
+      result = await exchange.depositEther({from: user1, value: amount})
+    })
+    describe('success', async() => {
+      // withdraws ether for test below to check tokens mapping ether balance
+      beforeEach(async() => {
+        result = await exchange.withdrawEther(amount, {from: user1})
+      })
+      // should equal 0 since both deposited 1 ether and subtracted 1 ether
+      it('withdraws Ether funds', async() => {
+        const balance = await exchange.tokens(ETHER_ADDRESS, user1);
+        balance.toString().should.equal('0');
+      })
+
+      it('emits a Withdraw event', async () => {
+        const log = result.logs[0];
+        log.event.should.equal("Withdraw");
+        console.log(result.logs[0]);
+  
+        // adjust to fit 4 params passed in Withdraw event in Exchange.sol
+        const argsObj = log.args;
+        // token param should be the ether address
+       argsObj.token.should.equal(ETHER_ADDRESS, 'ether address is correct');
+       argsObj.user.should.equal(user1,'user is correct');
+       // Since these are returned as BN format, convert toString() so that they become normal and not weirdly formatted
+       argsObj.amount.toString().should.equal(amount.toString(),'amount is correct');
+       argsObj.balance.toString().should.equal('0','balance is correct');
+        console.log(argsObj);
+        //argsObj.value.toString().should.equal(amount,'value transferred is correct');
+    })
+    })
+
+    describe('failure', () => {
+      it('rejects withdraws for insufficient balances', async() => {
+        //expect this to fail beacuse trying to withdraw more than a user has
+        await exchange.withdrawEther(ether(100), {from: user1}).should.be.rejectedWith(EVM_REVERT);
+      })
+    })
+  })
+
     // Depositing Tokens Test
-    describe("depositing tokens", () => {
+    describe("depositing Tokens", () => {
       let result
       // for more accessibility of the tokens(10) and not repeating everytime, created amount let variable
       let amount = tokens(10);
@@ -148,4 +192,78 @@ beforeEach(async() => {
       })
     });
 
+    describe('withdrawing Tokens', () => {
+      let result
+      // for more accessibility of the tokens(10) and not repeating everytime, created amount let variable
+      let amount = tokens(10);
+
+      // // This approves tokens so that they can be withdrawn even in fail cases; fail cases should be chai asserted just so they
+      //   // don't fail because of invalid amount only
+      // beforeEach(async() => {
+      //     // Explanation of this in depositing Tokens test
+      //     await token.approve(exchange.address, amount, { from : user1});
+      //     await exchange.depositToken(token.address,amount, { from: user1});
+      // })
+
+      describe('success', async() => {
+        beforeEach(async() => {
+                    // Explanation of this in depositing Tokens test
+                    await token.approve(exchange.address, amount, { from : user1});
+                    await exchange.depositToken(token.address,amount, { from: user1});
+          // set result equal to result of withdrawingTokens method not the depositToken as this is testing the withdrawal of tokens
+          result = await exchange.withdrawToken(token.address,amount,{from : user1})
+        })
+        it('withdraws token funds', async () => {
+          // Approves/Deposits and Withdraws Tokens above -> Adds 10 tokens and also removes 10 tokens -> should result in 0 being the 
+            // value for the tokens mapping of the tokens fo the specific user address. User still has tokens but not on the exchange.
+          const balance = await exchange.tokens(token.address, user1);
+          balance.toString().should.equal('0');
+        })
+
+        it('emits a Withdraw event', async () => {
+          const log = result.logs[0];
+          log.event.should.equal("Withdraw");
+          console.log(result.logs[0]);
+    
+          // adjust to fit 4 params passed in Withdraw event in Exchange.sol
+          const argsObj = log.args;
+         argsObj.token.should.equal(token.address, 'token address is correct');
+         argsObj.user.should.equal(user1,'user is correct');
+         // Since these are returned as BN format, convert toString() so that they become normal and not weirdly formatted
+         argsObj.amount.toString().should.equal(amount.toString(),'amount is correct');
+         argsObj.balance.toString().should.equal('0','balance is correct');
+          console.log(argsObj);
+      })
+      })
+
+      describe('failure', async() => {
+        // Due to the ether require() check being first, this will fail on the ether and not on the tokens being invalid
+          // even though it would fail on both because there are no tokens being added anywhere for these failure cases
+        it('rejects Ether withdraws', async () => {
+          await exchange.withdrawToken(ETHER_ADDRESS, tokens(10), {from : user1}).should.be.rejectedWith(EVM_REVERT)
+        })
+
+        // Should naturally fail because no tokens are in the specific user address
+        it('fails for insufficient balances', async() => {
+          await exchange.withdrawToken(token.address, tokens(10), {from : user1}).should.be.rejectedWith(EVM_REVERT)
+        })
+      })
+    })
+
+    describe('checking balances', () =>{ 
+      let amount = 10
+      let result 
+      it('returns user ether balance', async() => {
+        exchange.depositEther({from: user1, value: ether(amount)})
+        result = await exchange.balanceOf(ETHER_ADDRESS, user1)
+        result.toString().should.equal(ether(amount).toString());
+      })
+
+      it('returns user tokens balance', async() =>{
+        await token.approve(exchange.address, tokens(amount), { from : user1});
+        await exchange.depositToken(token.address,tokens(amount), { from: user1});
+        result = await exchange.balanceOf(token.address, user1)
+        result.toString().should.equal(tokens(amount).toString());
+      })
+    })
 });
