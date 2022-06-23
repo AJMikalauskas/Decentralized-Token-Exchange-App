@@ -68,6 +68,7 @@ contract Exchange {
 
     }
 
+
     // Can deposit token import from above and any token as long as it follows
         // ERC-20 format
     function depositToken(address _token, uint _amount) public
