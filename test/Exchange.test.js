@@ -269,7 +269,7 @@ beforeEach(async() => {
 
     // These tests are actually very minimal and only test if properties of the makeOrder order
       // are equal to values we expect. We'd need to actually deposit ether into the user's tokens mapping for them 
-        // to even have a valid order to make? As done in cancel order tests?
+        // to even have a valid order to make? As done in cancel order tests??
     describe('making orders', () => {
       let result
       beforeEach(async () => {
