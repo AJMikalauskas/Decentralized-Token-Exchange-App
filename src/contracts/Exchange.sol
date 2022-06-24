@@ -11,8 +11,8 @@ pragma solidity >=0.4.21 <0.9.0;
     //? [2] Deposit tokens
     //? [5] Withdraw tokens
     //? [6] Check Balances 
-    //? [] Make order
-    //? [] Cancel order
+    //? [7] Make order
+    //? [8] Cancel order
     //? [] Fill order
     //? [] Charge Fees
 
@@ -29,15 +29,44 @@ contract Exchange {
     uint256 public feePercent; // the fee percentage, lower on most exchanges, but we'll use 10%
     address constant ETHER = address(0); // ETHER address will never change, Ether has no address so we set as dummy address for tokens;
         // store Ether in tokens mapping with blank address
+    uint256 public orderCount;
     //mapping which is internal tracking mechanism to determine which token deposited, amoutn deposited, and who they belong to
         // nested mapping like allowance in Token.sol -> 1st key address is all tokens deposited(types and more),
             // 2nd key is address of user who deposited tokens themselves, show their balances of the specific token
     mapping(address => mapping(address => uint256)) public tokens;
+    // Need a way to store the orders [X] -> accessed by the id and returns _Order struct
+    mapping(uint256 => _Order) public orders;
+    // Cancelled Orders mapping to compare against the above orders mapping by id and returns true if same id in both; cancels order if same 
+        // id in both mappings.
+    mapping(uint256 => bool) public ordersCancelled;
 
     // Deposit event emitted, defining params here
     event Deposit(address token, address user, uint256 amount, uint256 balance);
     // Withdraw event emitted, defining params here
-    event Withdraw(address token, address user, uint amount, uint balance);
+    event Withdraw(address token, address user, uint256 amount, uint256 balance);
+    // Similar to struct _Order but is the event and will be used outside of smart contract - good naming convention considering it follows
+        // the other event naming conventions - emit when making order
+    event Order(uint256 id, address user, address tokenGet, uint256 amountGet, address tokenGive, uint256 amountGive, uint256 timestamp);
+    // The Same as Order event except for cancelling an order
+    event Cancel(uint256 id, address user, address tokenGet, uint256 amountGet, address tokenGive, uint256 amountGive, uint256 timestamp);
+        // Need a way to model the orders [X]
+        // Can create your own data types via a struct
+        // Example seen here: https://docs.soliditylang.org/en/v0.8.10/structure-of-a-contract.html 
+    struct _Order { // acts as a constructors setter like in c# -> sets properties/attributes of an order
+        uint256 id;
+        // person who made the order
+        address user;
+        // address of specific token user wants to purchase
+        address tokenGet;
+        // amount of token user wants to purchase
+        uint256 amountGet;
+        // token they will trade in to get the other token
+        address tokenGive;
+        // amount of tokens they will trade in to get another token
+        uint256 amountGive;
+        // the time the order will be placed
+        uint256 timestamp;
+    }
 
     // create feeAccount in () of constructor -> see Exchange.test.js
     constructor(address _feeAccount, uint256 _feePercent) public {
@@ -71,7 +100,7 @@ contract Exchange {
 
     // Withdraw ether functionality
         // Do Opposite of what we did when depositing ether
-    function withdrawEther(uint _amount) payable public {
+    function withdrawEther(uint256 _amount) payable public {
         // Can't ask to withdraw more than ether than a specific user address has in tokens mapping ->
             // can't ask to withdraw 100 ether and only have 1 in tokens mapping -> test this as failure case
                 // this should be rejected with error if user tries to withdraw more than they have 
@@ -88,8 +117,7 @@ contract Exchange {
 
     // Can deposit token import from above and any token as long as it follows
         // ERC-20 format
-    function depositToken(address _token, uint _amount) public
-    {
+    function depositToken(address _token, uint256 _amount) public{
         //Don't allow Ether Deposits
         require(_token != ETHER);
         // Which Token? -> do so by adding address _token in params, deposits token on ethereum
@@ -143,10 +171,43 @@ contract Exchange {
     }
 
     // Check Balance Function -> reader function essentially due to view keyword?
-    function balanceOf(address _token, address _user) public view returns(uint256)
-    {
+    function balanceOf(address _token, address _user) public view returns(uint256){
         // Just returns tokens mapping balance of specific token for specific user address
         // Create 2 dummy tests for checking balance of ether and our token in tokens mapping
         return tokens[_token][_user];
+    }
+
+    // add the order/retrieve order from storage [X]
+    function makeOrder(address _tokenGet, uint256 _amountGet, address _tokenGive, uint256 _amountGive) public{
+        // instantiates new order/struct -> call _Order() struct and pass in neccessary params into the _Order() functionality
+            // now is a solidity keyword that acts as the Date.now() from C#, returns Unix timestamp but can convert to human readable via
+                //  https://www.epochconverter.com/  
+        // dynamic id by using orderCount and adding 1 to it -> can act as a dynamic id and can get specific mapping of order using
+            // this orderCount number and replacing id attribute with the orderCount uint
+        orderCount = orderCount.add(1);
+        orders[orderCount] = _Order(orderCount, msg.sender, _tokenGet, _amountGet, _tokenGive, _amountGive, now);
+        emit Order(orderCount, msg.sender, _tokenGet, _amountGet, _tokenGive, _amountGive, now);
+    } 
+
+    // Cancels Order and stops a user from fulfilling an order that the other user just cancelled
+        // Cannot just take order out of orders mapping, any order made will always stay in orders mapping
+            // Create a cancelled orders mapping and will eventually compare against order mapping and what's left in orders mapping 
+                // will be orders that can be fulfilled. 
+    function cancelOrder(uint256 _id) public {
+        // 2 require() statements
+            // Must only be able to cancel your own orders
+                //! sets type of _order to the struct type of _Order -> pulls orders[_id] from storage of blockchain and sets equal to 
+                    //! _order variable
+            _Order storage _order = orders[_id];
+            // Uses statement above and checks if msg.sender(user1 in tests) is equal to the user property from the _order
+            require(_order.user == msg.sender);
+            // Can only cancel orders that exist not cancel orders that don't exist.
+                // Will not have an id property if the _id doesn't exist in the first place.
+            require(_order.id == _id);
+
+        // When set to true, order is cancelled and can't be fulfilled
+        ordersCancelled[_id] = true;
+        // emit cancel event -> not exactly sure how _order has access to these values? -> assigned above
+        emit Cancel(_order.id, msg.sender, _order.tokenGet, _order.amountGet, _order.tokenGive, _order.amountGive, now);
     }
 }

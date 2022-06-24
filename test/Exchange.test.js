@@ -4,7 +4,7 @@ const Token = artifacts.require('./Token')
 
 // Imports this way due to test whil importing
 require("chai").use(require("chai-as-promised")).should();
-contract("Exchange", ([deployer, feeAccount, user1]) => {
+contract("Exchange", ([deployer, feeAccount, user1, user2]) => {
   // initializing token let or variable
   let token
   let exchange;
@@ -264,6 +264,111 @@ beforeEach(async() => {
         await exchange.depositToken(token.address,tokens(amount), { from: user1});
         result = await exchange.balanceOf(token.address, user1)
         result.toString().should.equal(tokens(amount).toString());
+      })
+    })
+
+    // These tests are actually very minimal and only test if properties of the makeOrder order
+      // are equal to values we expect. We'd need to actually deposit ether into the user's tokens mapping for them 
+        // to even have a valid order to make? As done in cancel order tests?
+    describe('making orders', () => {
+      let result
+      beforeEach(async () => {
+        // Make order from user1 user to get 1 of our token by giving 1 ether.
+        result = await exchange.makeOrder(token.address, tokens(1), ETHER_ADDRESS, ether(1), {from : user1})
+      })
+
+      // This 1st test is to track if the orderCount/id is correct value of 1 after makeOrder is called once
+        // tracks overall order by calling .orders() -> track properties within order by first accessing the order
+      it('tracks the newly created order', async() => {
+        const orderCount = await exchange.orderCount();
+        orderCount.toString().should.equal('1');
+        //accessing single order created above
+        const order = await exchange.orders('1');
+        // Test if id is equal to 1 as string, test if user is equal to user1, test if tokenGet is equal to token.address, 
+        // test if amounGet is equal to tokens(1) toString(), tokenGive is equal to ether address, 
+        // amountGive is equal to ether(1) toString(), and finally to check if timestamp is at least greater than 1.
+        order.id.toString().should.equal('1', 'id is correct');
+        order.user.should.equal(user1, 'user is correct');
+        order.tokenGet.should.equal(token.address, 'tokenGet is correct');
+        order.amountGet.toString().should.equal(tokens(1).toString(), 'amountGet is correct');
+        order.tokenGive.should.equal(ETHER_ADDRESS, "tokenGive is correct");
+        order.amountGive.toString().should.equal(ether(1).toString(), 'amountGive is correct');
+        order.timestamp.toString().length.should.be.at.least(1, 'timestamp is present');
+      })
+
+      it('emits a Order event', async () => {
+        const log = result.logs[0];
+        log.event.should.equal("Order");
+        console.log(result.logs[0]);
+  
+        // adjust to fit 4 params passed in Order event in Exchange.sol
+        const argsObj = log.args;
+        argsObj.id.toString().should.equal('1', 'id is correct');
+        argsObj.user.should.equal(user1, 'user is correct');
+        argsObj.tokenGet.should.equal(token.address, 'tokenGet is correct');
+        argsObj.amountGet.toString().should.equal(tokens(1).toString(), 'amountGet is correct');
+        argsObj.tokenGive.should.equal(ETHER_ADDRESS, "tokenGive is correct");
+        argsObj.amountGive.toString().should.equal(ether(1).toString(), 'amountGive is correct');
+        argsObj.timestamp.toString().length.should.be.at.least(1, 'timestamp is present');
+
+        console.log(argsObj);
+    })
+    })
+
+    describe('order actions', async () => {
+      beforeEach(async() => {
+        // user1 despoits ether
+        await exchange.depositEther({ from: user1, value: ether(1)})
+        // user1 makes an order to buy tokens with Ether
+        await exchange.makeOrder(token.address, tokens(1), ETHER_ADDRESS, ether(1), {from: user1})
+      })
+
+      describe('cancelling orders', async() => {
+        let result
+
+        describe('success', async () => {
+          beforeEach(async () =>{
+            // cancels order using id from makeOrder above
+            result = await exchange.cancelOrder('1', {from: user1})
+          })
+
+          it('updates cancelled orders', async() => {
+            // checks if mapping of ordersCancelled with correct id is equal to true; should be true if the order is cancelled from calling
+              // shown above in beforeEach()
+            const orderCancelled = await exchange.ordersCancelled(1);
+            orderCancelled.should.equal(true)
+          })
+
+          it('emits a Cancel event', async () => {
+            const log = result.logs[0];
+            log.event.should.equal("Cancel");
+            console.log(result.logs[0]);
+      
+            // adjust to fit 7 params passed in Cancel event in Exchange.sol
+            const argsObj = log.args;
+            argsObj.id.toString().should.equal('1', 'id is correct');
+            argsObj.user.should.equal(user1, 'user is correct');
+            argsObj.tokenGet.should.equal(token.address, 'tokenGet is correct');
+            argsObj.amountGet.toString().should.equal(tokens(1).toString(), 'amountGet is correct');
+            argsObj.tokenGive.should.equal(ETHER_ADDRESS, "tokenGive is correct");
+            argsObj.amountGive.toString().should.equal(ether(1).toString(), 'amountGive is correct');
+            argsObj.timestamp.toString().length.should.be.at.least(1, 'timestamp is present');
+    
+            console.log(argsObj);
+        })
+        })
+        describe('failure', async() => {
+          // Cannot cancel an order that doesn't exist -> should only be one order from makeOrder above not 9999 invalid id
+          it('rejects invalid order ids', async() =>{
+            const invalidOrderId = 9999;
+            await exchange.cancelOrder(invalidOrderId, {from: user1}).should.be.rejectedWith(EVM_REVERT);
+          })
+
+          // user2 shouldn't be able to cancel an order that user1 made
+          it('rejects unauthorized cancellations', async () => {
+            await exchange.cancelOrder('1', {from: user2}).should.be.rejectedWith(EVM_REVERT);
+          })
+        })
       })
     })
 });
