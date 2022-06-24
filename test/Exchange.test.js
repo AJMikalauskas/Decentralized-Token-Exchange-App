@@ -1,3 +1,4 @@
+import { should } from "chai";
 import {tokens, EVM_REVERT, ETHER_ADDRESS, ether} from "./helpers.js";
 const Exchange = artifacts.require("./Exchange");
 const Token = artifacts.require('./Token')
@@ -317,10 +318,96 @@ beforeEach(async() => {
 
     describe('order actions', async () => {
       beforeEach(async() => {
-        // user1 despoits ether
+        // user1 deposits ether only
         await exchange.depositEther({ from: user1, value: ether(1)})
+        // give tokens to user2
+        await token.transfer(user2, tokens(100), {from: deployer})
+        // user2 deposits tokens only to exchange
+        await token.approve(exchange.address, tokens(2), {from: user2})
+        await exchange.depositToken(token.address, tokens(2), {from : user2})
         // user1 makes an order to buy tokens with Ether
         await exchange.makeOrder(token.address, tokens(1), ETHER_ADDRESS, ether(1), {from: user1})
+      })
+      describe('filling orders', async() => {
+        let result
+
+        describe('success', async () => {
+          beforeEach(async() => {
+            // user2 fills order
+            result = await exchange.fillOrder('1', { from: user2 });
+          })
+
+          it('executes the trade & charges fees', async() => {
+            let balance
+            // user1 receieves tokens for their ether they traded to user2
+            balance = await exchange.balanceOf(token.address,user1)
+            balance.toString().should.equal(tokens(1).toString(), 'user1 received tokens')
+            // user2 receives ether for the tokens they traded to user1
+            balance = await exchange.balanceOf(ETHER_ADDRESS, user2)
+            balance.toString().should.equal(ether(1).toString(), 'user2 received Ether')
+            // Check if user1 has no ether anymore after order filled/ trade completed
+            balance = await exchange.balanceOf(ETHER_ADDRESS, user1)
+            balance.toString().should.equal('0', 'user1 Ether deducted')
+             // Check if user2 has correct amount of tokens after fee amount + traded token amount ether anymore 
+              // after order filled/ trade completed
+            balance = await exchange.balanceOf(token.address, user2)
+            balance.toString().should.equal(tokens(0.9).toString(), 'user2 tokens deducted with 10% fee applied')
+            // Check if feeAmount is correct, should be 10% of whatever user2 fulfilled the order with which was tokens
+            const feeAccount = await exchange.feeAccount()
+            balance = await exchange.balanceOf(token.address, feeAccount)
+            balance.toString().should.equal(tokens(0.1),toString(), 'feeAccount received fee')
+          })
+
+          // This is checking the ordersFulfilled mapping value of the _id being true as return part of the mapping
+          it('updates filled orders', async() => {
+            const orderFilled = await exchange.ordersFulfilled(1)
+            orderFilled.should.equal(true);
+          })
+
+          // Same as other event testing with only 1 new param 
+          it('emits a Trade event', async () => {
+            const log = result.logs[0];
+            log.event.should.equal("Trade");
+            console.log(result.logs[0]);
+      
+            // adjust to fit 8 params passed in Trade event in Exchange.sol
+            const argsObj = log.args;
+            argsObj.id.toString().should.equal('1', 'id is correct');
+            argsObj.user.should.equal(user1, 'user is correct');
+            argsObj.tokenGet.should.equal(token.address, 'tokenGet is correct');
+            argsObj.amountGet.toString().should.equal(tokens(1).toString(), 'amountGet is correct');
+            argsObj.tokenGive.should.equal(ETHER_ADDRESS, "tokenGive is correct");
+            argsObj.amountGive.toString().should.equal(ether(1).toString(), 'amountGive is correct');
+            argsObj.userFill.should.equal(user2, 'userFill is correct');
+            argsObj.timestamp.toString().length.should.be.at.least(1, 'timestamp is present');
+    
+            console.log(argsObj);
+        })
+        })
+
+        describe('failure', async () => {
+             // Cannot fill an order that doesn't exist 
+             it('rejects invalid order ids', async() =>{
+              const invalidOrderId = 9999;
+              await exchange.cancelOrder(invalidOrderId, {from: user1}).should.be.rejectedWith(EVM_REVERT);
+            })
+  
+            // Tries to fill same order twice, not possible
+            it('rejects already-filled orders', async () => {
+              // Fill Order originally
+              await exchange.fillOrder('1', {from: user2}).should.be.fulfilled
+              // try to fill order again, should fail
+              await exchange.fillOrder('1', {from: user2}).should.be.rejectedWith(EVM_REVERT);
+            })
+
+            // Tries to fill order after it's already been cancelled
+            it('rejects cancelled orders', async () => {
+              // Cancel the Order
+              await exchange.cancelOrder('1', {from : user1}).should.be.fulfilled
+              // Try to fill order after it's been cancelled, should fail
+              await exchange.fillOrder('1', {from: user2}).should.be.rejectedWith(EVM_REVERT)
+            })
+        })
       })
 
       describe('cancelling orders', async() => {

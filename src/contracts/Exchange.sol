@@ -13,8 +13,7 @@ pragma solidity >=0.4.21 <0.9.0;
     //? [6] Check Balances 
     //? [7] Make order
     //? [8] Cancel order
-    //? [] Fill order
-    //? [] Charge Fees
+    //? [9-10] Fill order & Charge Fees
 
 
 import "./Token.sol";
@@ -39,6 +38,8 @@ contract Exchange {
     // Cancelled Orders mapping to compare against the above orders mapping by id and returns true if same id in both; cancels order if same 
         // id in both mappings.
     mapping(uint256 => bool) public ordersCancelled;
+    // Similar to the above mapping except it tells you which orders are fulfilled not cancelled
+    mapping(uint256 => bool) public ordersFulfilled;
 
     // Deposit event emitted, defining params here
     event Deposit(address token, address user, uint256 amount, uint256 balance);
@@ -49,6 +50,8 @@ contract Exchange {
     event Order(uint256 id, address user, address tokenGet, uint256 amountGet, address tokenGive, uint256 amountGive, uint256 timestamp);
     // The Same as Order event except for cancelling an order
     event Cancel(uint256 id, address user, address tokenGet, uint256 amountGet, address tokenGive, uint256 amountGive, uint256 timestamp);
+    // trade event, similar to cancel and order, but fills trade
+    event Trade(uint256 id, address user, address tokenGet, uint256 amountGet, address tokenGive, uint256 amountGive, address userFill, uint256 timestamp);
         // Need a way to model the orders [X]
         // Can create your own data types via a struct
         // Example seen here: https://docs.soliditylang.org/en/v0.8.10/structure-of-a-contract.html 
@@ -200,7 +203,8 @@ contract Exchange {
                     //! _order variable
             _Order storage _order = orders[_id];
             // Uses statement above and checks if msg.sender(user1 in tests) is equal to the user property from the _order
-            require(_order.user == msg.sender);
+            // Not necessary to cast the _order.user to address but it probably just helps with typescript type in case of funky numbered address
+            require(address(_order.user) == msg.sender);
             // Can only cancel orders that exist not cancel orders that don't exist.
                 // Will not have an id property if the _id doesn't exist in the first place.
             require(_order.id == _id);
@@ -209,5 +213,41 @@ contract Exchange {
         ordersCancelled[_id] = true;
         // emit cancel event -> not exactly sure how _order has access to these values? -> assigned above
         emit Cancel(_order.id, msg.sender, _order.tokenGet, _order.amountGet, _order.tokenGive, _order.amountGive, now);
+    }
+
+    function fillOrder(uint256 _id) public {
+        //another require check making sure _id is greater than 0 and is less than or equal to orderCount(orderCount is the max id number possible)
+        require(_id > 0 && _id <= orderCount);
+        // Make sure the order hasn't been fulfilled nor cancelled already through require() checks
+        require(!ordersFulfilled[_id]);
+        require(!ordersCancelled[_id]);
+        //? Steps:
+            // Fetch The Order -> same logic from cancelOrder() method
+            _Order storage _order = orders[_id];
+            _trade(_order.id, _order.user, _order.tokenGet, _order.amountGet, _order.tokenGive, _order.amountGive);
+            // Mark order as filled -> create another ordersFulfilled mapping and set to true based on _id param passed in
+            ordersFulfilled[_id] = true;
+    }
+
+    //internal keyword makes it so people can't call this function outside this solidity smart contract; only used and called in here
+        // not in tests
+    function _trade(uint256 _orderId, address _user, address _tokenGet, uint256 _amountGet, address _tokenGive, uint256 _amountGive) internal {
+            // Charge Fees -> Fee paid by the user that fills the order, msg.sender here; Fee deducted from _amountGet.
+            // Our current feePercent is 10%, so if 100 tokens sent, fee is 10 tokens.
+            uint256 _feeAmount = _amountGet.mul(feePercent).div(100);
+            
+            // Execute Trade -> msg.sender is one who filled order; _user is one who made the order.
+                // subtract amount of tokens from the one who filled the order and add that token amount to the one who made the order
+            tokens[_tokenGet][msg.sender] = tokens[_tokenGet][msg.sender].sub(_amountGet.add(_feeAmount));
+            tokens[_tokenGet][_user] = tokens[_tokenGet][_user].add(_amountGet);
+            // add feeAmount to feeAccount in constructor -> Part of charging fees
+            tokens[_tokenGet][feeAccount] = tokens[_tokenGet][feeAccount].add(_feeAmount);
+            // subtract amount of tokens from one who made the order and add that amount to the one who filled the order.
+            tokens[_tokenGive][_user] = tokens[_tokenGive][_user].sub(_amountGive);
+            tokens[_tokenGive][msg.sender] = tokens[_tokenGive][msg.sender].add(_amountGive);
+
+            // Emit Trade event -> similar to order and cancel event with only 1 new parameter being 
+                // the address of the user who filled the order
+            emit Trade(_orderId, _user, _tokenGet, _amountGet, _tokenGive, _amountGive, msg.sender, now);
     }
 }
