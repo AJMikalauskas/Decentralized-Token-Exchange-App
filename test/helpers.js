@@ -21,3 +21,9 @@ export const ether = (n) => {
 
   // Same functionality from before but instead referencing to ether function
 export const tokens = (n) => ether(n)
+
+// For Seeding the exchange to wait 1 with param of time passed in as seconds
+const wait = (seconds) => {
+  const miliseconds= seconds *1000;
+  return new Promise(resolve => setTimeout(resolve,miliseconds))
+}
