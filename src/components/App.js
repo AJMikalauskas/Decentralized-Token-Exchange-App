@@ -62,6 +62,7 @@ class App extends Component {
             const exchange = await loadExchange(web3,networkId,dispatch)
             console.log("exchange", exchange)
             // if loadToken runs into error or catch and returns null
+            // testing push to different remote and branch github
             if(!exchange) {
               window.alert('Exchange smart contract not detected on the current network. Please select another network within Metamask.')
             }
