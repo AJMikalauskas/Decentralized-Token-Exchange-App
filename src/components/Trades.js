@@ -40,6 +40,7 @@ class Trades extends Component {
                   <th>MTN/ETH</th>
                 </tr>
               </thead>
+              {/* Ternary Operation with JSX Conditional */}
               {this.props.filledOrdersLoaded ? (
                 showFilledOrders(this.props.fillOrders)
               ) : (
