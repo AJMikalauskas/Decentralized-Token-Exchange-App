@@ -1,8 +1,7 @@
-import { create, get } from "lodash";
+import { create, get, reject, groupBy,some } from "lodash";
 import moment from "moment";
 import { createSelector } from "reselect";
 import { GREEN, RED, ETHER_ADDRESS, tokens, ether } from "../helpers";
-
 // Can see where to get account from redux dev tools state -> web3 -> account
     // get allows us to provide a default value in case such things as web3.account doesn't exist so page won't blow up. 
     // The 1st param is the state object, 2nd param is the path such as state.web3.account but as a string, 3rd param is default value. 
@@ -30,6 +29,17 @@ export const contractsLoadedSelector = createSelector(
     exchangeLoaded,
     (tl,el) => (tl && el)
 );
+
+// All Orders without selector
+const allOrdersLoaded = state => get(state,'exchange.allOrders.loaded', false)
+const allOrders = state => get(state, 'exchange.allOrders.data', [])
+
+// Cancelled Orders Loaded and Cancelled Orders Selectors
+const cancelledOrdersLoaded = state => get(state,'exchange.cancelledOrders.loaded', false)
+export const cancelledOrdersLoadedSelector = createSelector(cancelledOrdersLoaded, loaded => loaded)
+
+const cancelledOrders = state => get(state, 'exchange.cancelledOrders.data', []);
+export const cancelledOrdersSelector = createSelector(cancelledOrders, o => o);
 
 // filledOrdersLoaded simialr to the loaded of token and exchange.
 const filledOrdersLoaded = state => get(state, 'exchange.filledOrders.loaded', false)
@@ -121,4 +131,86 @@ const tokenPriceClass = (tokenPrice, orderId, previousOrder) => {
     else {
         return RED; // denoted by danger in bootstrap
     }
+}
+
+// filter orders here
+const openOrders = state => {
+    const all = allOrders(state)
+    const cancelled = cancelledOrders(state)
+    const filled = filledOrders(state)
+
+    const openOrders = reject(all, (order) => {
+        // iterates over all the orders and checks current order.id against the order ids in the filledOrders and cancelledOrders
+            // if exists return and filter out, else keep in the openOrders
+        // if the order is filled, will be part of the orderFilled const and is the filtered data as part of the 2nd param
+        const orderFilled = filled.some((o) => o.id === order.id)
+        // Similar logic to orderFilled
+        const orderCancelled = cancelled.some((o) => o.id === order.id)
+        return (orderFilled || orderCancelled)
+    })
+    return openOrders;
+}
+
+// These are the allOrders selectors butwe renamed to orderBook from above.
+    // Know that orderBookLoaded is only loaded if filled, cancelled and all orders are loaded.
+    // Will use all 3 later when getting orders for order book by filtering allOrders and taking out cancelled and filledOrders.
+const orderBookLoaded = state => cancelledOrdersLoaded(state) && filledOrdersLoaded(state) && allOrdersLoaded(state);
+export const orderBookLoadedSelector = createSelector(orderBookLoaded, loaded => loaded)
+
+// Create the order book
+export const orderBookSelector = createSelector(
+    // Going to assume that the filtered orders if what the openOrders pass in is
+    openOrders,
+    (orders) => {
+        // Decorate Orders
+        orders = decorateOrderBookOrders(orders); 
+        // Group orders by orderType
+        orders = groupBy(orders, 'orderType');
+
+
+        // HIGHER PRICE FIRST, LOWER PRICE LAST
+        // Fetch buy orders
+            // Get buyOrders by get() method from lodash, empty array is default value.
+        const buyOrders = get(orders,'buy',[])
+        // Sort buy orders by token price ascending
+        orders = {
+            ...orders,
+            buyOrders: buyOrders.sort((a,b) => b.tokenPrice - a.tokenPrice)
+        }
+
+        // Fetch sell orders
+            // Get sellOrders by get() method from lodash, empty array is default value.
+        const sellOrders = get(orders,'sell',[])
+        // Sort sell orders by token price ascending
+        orders = {
+            ...orders,
+            sellOrders: sellOrders.sort((a,b) => b.tokenPrice - a.tokenPrice)
+        }
+        
+        return orders;
+    }
+)
+
+// Similar logic to decorateFilledOrders()
+const decorateOrderBookOrders = (orders) => {
+    return(
+        orders.map((order) => {
+            order = decorateOrder(order)
+            // Decorate order book order...
+            order = decorateOrderBookOrder(order)
+            return (order)
+        })
+    )
+}
+
+// Determine if an order is a buy or sell order based on ternary condition of the order.tokenGive being ether; if so, it's a buy order
+    // else it's a sell order. Getting token by giving ether; Getting ether by giving token
+const decorateOrderBookOrder = (order) => {
+    const orderType = order.tokenGive === ETHER_ADDRESS ? 'buy' : 'sell'
+    return ({
+        ...order,
+        orderType,
+        orderTypeClass: (orderType === 'buy' ? GREEN : RED),
+        orderFillClass: (orderType === 'buy' ? 'sell' : 'buy')
+    })
 }
