@@ -214,3 +214,89 @@ const decorateOrderBookOrder = (order) => {
         orderFillClass: (orderType === 'buy' ? 'sell' : 'buy')
     })
 }
+
+
+// For the myTransactions, but this is similar to what is shown above.
+export const myFilledOrdersLoadedSelector = createSelector(filledOrdersLoaded, loaded => loaded);
+
+export const myFilledOrdersSelector = createSelector(
+    account,
+    filledOrders,
+    (account,orders) => {
+        // Find Our Orders
+        orders = orders.filter((o) => o.user === account || o.userFill === account)
+        // sort by date ascending
+        orders = orders.sort((a,b) => a.timestamp - b.timestamp)
+        // Decorate orders - add display attributes
+        orders = decorateMyFilledOrders(orders,account);
+        return orders
+    }
+)
+
+// Makes call to design specific order from orders.
+    // Similar to decorateFilledOrders()
+const decorateMyFilledOrders = (filledOrders,account) => {
+    return(
+        filledOrders.map((order) => {
+             order = decorateOrder(order);
+             order = decorateMyFilledOrder(order);
+             return (order);
+        })
+    )
+}
+
+const decorateMyFilledOrder = (filledOrder,account) => {
+    const myOrder = filledOrder.user === account
+    
+    let orderType
+    if(myOrder) {
+        orderType = filledOrder.tokenGive === ETHER_ADDRESS ? 'buy' : 'sell';
+    } else {
+        orderType = filledOrder.tokenGive === ETHER_ADDRESS ? 'sell' : 'buy';
+    }
+
+    return({
+        ...filledOrder,
+        orderType,
+        orderTypeClass: (orderType === 'buy' ? GREEN : RED),
+        orderSign: (orderType === 'buy' ? "+" : "-")
+    })
+}
+
+export const myOpenOrdersLoadedSelector = createSelector(orderBookLoaded, loaded => loaded);
+
+export const myOpenOrdersSelector = createSelector(
+    account,
+    openOrders,
+    (account,openOrders) => {
+        // Find Our Orders created by user account
+        openOrders = openOrders.filter((o) => o.user === account);
+        // Decorate orders - add display attributes
+        openOrders = decorateMyOpenOrders(openOrders,account);
+        // sort by date descending
+        openOrders = openOrders.sort((a,b) => b.timestamp - a.timestamp)
+        return openOrders;
+    }
+)
+
+// Makes call to design specific order from orders.
+// Similar to decorateMyFilledOrders
+const decorateMyOpenOrders = (openOrders,account) => {
+    return(
+        openOrders.map((order) => {
+             order = decorateOrder(order);
+             order = decorateMyOpenOrder(order,account);
+             return (order);
+        })
+    )
+}
+
+const decorateMyOpenOrder = (openOrder,account) => {
+    let orderType = openOrder.tokenGive === ETHER_ADDRESS ? 'buy' : 'sell';
+
+    return({
+        ...openOrder,
+        orderType,
+        orderTypeClass: (orderType === 'buy' ? GREEN : RED)
+    })
+}

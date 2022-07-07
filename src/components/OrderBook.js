@@ -27,8 +27,8 @@ const showOrderBook = (props) => {
             {/* List Sell Orders*/}
             {orderBook.sellOrders.map((order) =>{ return renderOrder(order,props)})}
             {/* Create Divider */}
-            <br/>
-            <br/>
+            {/* <br/>
+            <br/> */}
                 <tr>
                     <th>MTN</th>
                     <th>MTN/ETH</th>
