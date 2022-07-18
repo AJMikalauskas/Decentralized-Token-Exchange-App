@@ -89,7 +89,7 @@ function mapStateToProps(state) {
         showMyOpenOrders: myOpenOrdersLoadedSelector(state)
     })
     return {
-        myFilledOrders: myFilledOrdersLoadedSelector(state),
+        myFilledOrders: myFilledOrdersSelector(state),
         showMyFilledOrders: myFilledOrdersLoadedSelector(state),
         myOpenOrders: myOpenOrdersSelector(state),
         showMyOpenOrders: myOpenOrdersLoadedSelector(state)

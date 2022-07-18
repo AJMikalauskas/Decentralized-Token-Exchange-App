@@ -1,4 +1,4 @@
-import { create, get, reject, groupBy,some } from "lodash";
+import { create, get, reject, groupBy, maxBy, minBy } from "lodash";
 import moment from "moment";
 import { createSelector } from "reselect";
 import { GREEN, RED, ETHER_ADDRESS, tokens, ether } from "../helpers";
@@ -299,4 +299,76 @@ const decorateMyOpenOrder = (openOrder,account) => {
         orderType,
         orderTypeClass: (orderType === 'buy' ? GREEN : RED)
     })
+}
+
+// Based on filledOrdersLoaded state and will return that state. Booleans based selector and similar to other selectors.
+export const priceChartLoadedSelector = createSelector(filledOrdersLoaded, loaded => loaded);
+
+export const priceChartSelector = createSelector(
+    filledOrders,
+    (orders) => {
+        // Sort orders by date ascending to compare history
+        orders = orders.sort((a,b) => a.timestamp - b.timestamp)
+
+        //Decorate orders - add display attributes
+        orders = orders.map((o) => decorateOrder(o))
+
+        // format data in the way we want via high, low, close and open prices.
+        // Get last 2 orders for final price & price change
+            // Parallel Assignment by declaring and then assigning in weird/different array way 
+            // slices 2 elements from end to the end of the array.
+        let secondLastOrder, lastOrder
+        [secondLastOrder, lastOrder] = orders.slice(orders.length - 2, orders.length)
+
+        // get last order price
+            // gets lastOrder.tokenPrice, else if not possible, reverts to default value of 0 if lastOrder.tokenPrice not found.
+        const lastPrice = get(lastOrder, 'tokenPrice', 0);
+
+        // get second to last order price
+        // gets secondLastOrder.tokenPrice, else if not possible, reverts to default value of 0 if secondLastOrder.tokenPrice not found.
+        const secondLastPrice = get(secondLastOrder, 'tokenPrice', 0);
+
+        return ({
+            // ES6 feature of the property being the same name as its value.
+            lastPrice,
+            // ternary operation to see what symbol to use from lastPriceChange
+            lastPriceChange: (lastPrice >= secondLastPrice ? '+' : '-'),
+            series: [{
+                // can use empty array to see test results
+                data: buildGraphData(orders)
+            }]
+        })
+    }
+)
+
+const buildGraphData = (orders) => {
+    // Use lodash groupBy() method; 2nd param is the moment.uinx(timestamp) param and startOf() with the hour param.
+        // Group the orders by the hour for the graph.
+    orders = groupBy(orders,(o) =>moment.unix(o.timestamp).startOf('hour').format())
+
+    // Get each hour where data exists
+    const hours = Object.keys(orders);
+
+    // Build the graph series
+    const graphData = hours.map((hour) => {
+        // Select specific orders by [] -> Fetch all the orders from the current order
+        const group = orders[hour]
+        // Calculate price values - open, close, high, and low.
+
+        // 1st order or open price
+        const open = group[0];
+
+        // Last order or close price
+        const close = group[group.length-1] 
+
+        // Use maxBy() lodash method and other lodash methods to get high and low price
+        const high = maxBy(group, 'tokenPrice') // high price
+        const low = minBy(group,'tokenPrice') // low price
+
+        return({
+            x: new Date(hour),
+            y: [open.tokenPrice, high.tokenPrice, low.tokenPrice, close.tokenPrice]
+        })
+    })
+    return graphData;
 }
