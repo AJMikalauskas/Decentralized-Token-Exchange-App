@@ -1,16 +1,36 @@
 import React, {Component} from 'react'
+import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import { connect } from 'react-redux'
-import { orderBookSelector, orderBookLoadedSelector } from '../store/selectors'
+import { orderBookSelector, orderBookLoadedSelector, exchangeSelector, accountSelector,orderFillingSelector } 
+from '../store/selectors'
 import Spinner from './Spinner'
+import { fillOrder } from '../store/interactions'
 
 //Format orders to be table specific and individual table item specific
-const renderOrder = (order) => {
+const renderOrder = (order, props) => {
+    const {account, exchange, dispatch} = props;
     return(
-        <tr key={order.id}>
+        <OverlayTrigger
+        key={order.id}
+        placement='auto'
+        overlay={
+            <Tooltip id={order.id}>
+                {`Click here to ${order.orderFillAction}`}
+            </Tooltip>
+        }>
+        <tr 
+        key={order.id}
+        className="order-book-order"
+        onClick={(e) => 
+            //console.log('filling order...')
+            fillOrder(dispatch,exchange,order,account)
+        }
+        >
             <td>{order.tokenAmount}</td>
             <td className={`text-${order.orderTypeClass}`}>{order.tokenPrice}</td>
             <td>{order.etherAmount}</td>
         </tr>
+        </OverlayTrigger>
     )
 }
 
@@ -60,9 +80,13 @@ class OrderBook extends Component {
 }
 
 function mapStateToProps(state) {
+    const orderBookLoaded = orderBookLoadedSelector(state);
+    const orderFilling = orderFillingSelector(state);
     return {
         orderBook: orderBookSelector(state),
-        showOrderBook: orderBookLoadedSelector(state)
+        showOrderBook: orderBookLoaded && !orderFilling,
+        exchange: exchangeSelector(state),
+        account: accountSelector(state), 
     }
 }
 

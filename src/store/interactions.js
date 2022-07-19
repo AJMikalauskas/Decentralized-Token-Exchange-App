@@ -10,7 +10,9 @@ import {
     filledOrdersLoaded,
     allOrdersLoaded,
     orderCancelling,
-    orderCancelled
+    orderCancelled,
+    orderFilling,
+    orderFilled
 }
 from "./actions";
 
@@ -128,5 +130,24 @@ export const subscribeToEvents = async(dispatch, exchange) => {
   exchange.events.Cancel({}, (error, event) => {
     console.log(event.returnValues)
     dispatch(orderCancelled(event.returnValues))
+  })
+
+  // This is listening for the trades/filled order event to be emitted
+  exchange.events.Trade({}, (error, event) => {
+    console.log(event.returnValues)
+    dispatch(orderFilled(event.returnValues))
+  })
+}
+
+
+export const fillOrder = (dispatch, exchange, order, account) => {
+  // Call fillOrder function from the exchange smart contract -> similar to cancelOrder function above.
+  exchange.methods.fillOrder(order.id).send({from : account})
+  .on('transactionHash', (hash) => {
+    dispatch(orderFilling())
+  })
+  .on('error', (error) => {
+    console.log(error);
+    window.alert('There was an error!')
   })
 }

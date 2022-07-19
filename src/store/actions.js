@@ -67,3 +67,18 @@ export function orderCancelled(order) {
         order
     }
 }
+
+// in process of fillingOrder action
+export function orderFilling() {
+    return {
+        type: "ORDER_FILLING",
+    }
+}
+
+// Filled Order/Trade action
+export function orderFilled(order) {
+    return {
+        type: "ORDER_FILLED",
+        order
+    }
+}
