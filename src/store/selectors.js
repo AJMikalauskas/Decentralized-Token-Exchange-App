@@ -378,3 +378,6 @@ const buildGraphData = (orders) => {
         // based on orderCancelling property we added in reducers.js when in process of orderCancelling action 
 const orderCancelling = state => get(state, 'exchange.orderCancelling', false)
 export const orderCancellingSelector = createSelector(orderCancelling, status => status)
+
+//Create a way to fill orders by just hovering over them in the order book and being able to fulfill them there
+    // make sure that you can't fulfill your own orders.
