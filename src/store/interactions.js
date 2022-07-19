@@ -8,7 +8,9 @@ import {
     exchangeLoaded,
     cancelledOrdersLoaded, 
     filledOrdersLoaded,
-    allOrdersLoaded
+    allOrdersLoaded,
+    orderCancelling,
+    orderCancelled
 }
 from "./actions";
 
@@ -94,3 +96,37 @@ export const loadAccount = async (web3, dispatch) => {
     // create an action for allOrders and dispatch action in filtered allOrders info from orderStream
     dispatch(allOrdersLoaded(allOrders));
   }
+
+export const cancelOrder = (dispatch, exchange, order, account) => {
+  // Call cancelOrder function from the exchange smart contract
+    // Use the 4 params above to put in web3 methods such as .send() -> send methods will require you to create transactions
+      // which can be made here but on the blockchain smart contract
+      // Follow documentation: https://web3js.readthedocs.io/en/v1.2.0/web3-eth-contract.html#methods-mymethod-send 
+      // exchange is the contract in which method we're trying to use, cancelOrder is the method in which we're using
+      // order.id is the param to use for the id param from exchange smart contract cancelOrder() method
+      // account is the current metamask address. 
+  exchange.methods.cancelOrder(order.id).send({from : account})
+  .on('transactionHash', (hash) => {
+    // This is an async function call, handle by .on() event emitter
+    // waits for transactionHash to come back from the blockchain before a redux action is triggered that the order 
+    // is cancelling
+    // Dispatch action here 
+      // 2 events of both cancellingOrder() and fully having a cancelledOrder() once the Cancel event is emitted on blockchain.
+    dispatch(orderCancelling())
+  })
+  .on('error', (error) => {
+    // Handle any errors that result from .send() method
+    console.log(error);
+    window.alert('There was an error!')
+  })
+}
+
+export const subscribeToEvents = async(dispatch, exchange) => {
+  // follow this documentation: https://web3js.readthedocs.io/en/v1.2.0/web3-eth-contract.html#contract-events 
+    // No options and 2nd param is the callback which is an anonymous arrow function that will use error and event
+      // Dispatches orderCancelled event which will have the event.returnValues seen in the action or in reducers.js 
+  exchange.events.Cancel({}, (error, event) => {
+    console.log(event.returnValues)
+    dispatch(orderCancelled(event.returnValues))
+  })
+}

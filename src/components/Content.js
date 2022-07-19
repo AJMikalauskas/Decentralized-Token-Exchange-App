@@ -1,6 +1,6 @@
 import React, {Component} from "react";
 import { connect } from "react-redux";
-import { loadAllOrders } from "../store/interactions";
+import { loadAllOrders, subscribeToEvents } from "../store/interactions";
 import { exchangeSelector } from "../store/selectors";
 import Trades from "./Trades";
 import OrderBook from "./OrderBook";
@@ -9,11 +9,17 @@ import PriceChart from "./PriceChart";
 
 class Content extends Component {
   componentWillMount() {
-    this.loadBlockchainData(this.props.dispatch)
+    this.loadBlockchainData(this.props)
   }
-  async loadBlockchainData(dispatch) {
+  // Reorganizes to only destructure from props rather than calling as just a param
+  async loadBlockchainData(props) {
+    const { exchange, dispatch } = props;
     // access exchange by new selector in selectors.js
-    await loadAllOrders(this.props.exchange,dispatch);
+    await loadAllOrders(exchange,dispatch);
+    //subscribeToEvents is here,Uses In Content.js so that the component(the whole page) re-renders 
+      // with new data and when you click and confirm to cancel an order, 
+        // it will update the page and should remove the order from order book and orders tab too in MyTransactions. 
+    await subscribeToEvents(dispatch,exchange)
   }
     render() {
         return (

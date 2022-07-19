@@ -1,4 +1,4 @@
-import { create, get, reject, groupBy, maxBy, minBy } from "lodash";
+import { get, reject, groupBy, maxBy, minBy } from "lodash";
 import moment from "moment";
 import { createSelector } from "reselect";
 import { GREEN, RED, ETHER_ADDRESS, tokens, ether } from "../helpers";
@@ -372,3 +372,9 @@ const buildGraphData = (orders) => {
     })
     return graphData;
 }
+
+// create orderCancellingSelector so that the loading spinner shows and 
+    // multiple orders can't be cancelled at once when already cancelling another order
+        // based on orderCancelling property we added in reducers.js when in process of orderCancelling action 
+const orderCancelling = state => get(state, 'exchange.orderCancelling', false)
+export const orderCancellingSelector = createSelector(orderCancelling, status => status)

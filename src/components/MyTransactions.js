@@ -5,11 +5,16 @@ import {
     myFilledOrdersLoadedSelector,
     myFilledOrdersSelector,
     myOpenOrdersLoadedSelector,
-    myOpenOrdersSelector
+    myOpenOrdersSelector,
+    exchangeSelector,
+    accountSelector,
+    orderCancellingSelector
 } from  "../store/selectors";
 import Spinner from './Spinner';
+import { cancelOrder } from '../store/interactions';
 
-const showMyFilledOrders = (myFilledOrders) => {
+const showMyFilledOrders = (props) => {
+    const { myFilledOrders } = props;
     return(
         <tbody>
         { myFilledOrders.map((order) => {
@@ -24,7 +29,8 @@ const showMyFilledOrders = (myFilledOrders) => {
         </tbody>
     )
 }
-const showMyOpenOrders = (myOpenOrders) => {
+const showMyOpenOrders = (props) => {
+    const {myOpenOrders, dispatch, exchange, account} = props;
     return(
         <tbody>
             { myOpenOrders.map((order) => {
@@ -32,7 +38,15 @@ const showMyOpenOrders = (myOpenOrders) => {
                     <tr key={order.id}>
                         <td className={`text-${order.orderTypeClass}`}>{order.tokenAmount}</td>
                         <td className={`text-${order.orderTypeClass}`}>{order.tokenPrice}</td>
-                        <td className='text-muted'>x</td>
+                        {/* Cancel order className is to add a pointer when hovering over the X */}
+                        <td className='text-muted cancel-order'
+                            onClick={(e) => { //console.log("cancelling orders")
+                                // Have access to account and exchange by their selectors in the store selectors file and make into props
+                                    // access to dipatch via props and order via the map arrow function.
+                                cancelOrder(dispatch, exchange, order, account)
+                                //subscribeToEvents(dispatch,exchange)
+                            }}
+                        >x</td>
                     </tr>
                 )
             })}
@@ -58,7 +72,7 @@ class MyTransactions extends Component {
                                         <th>MTN/ETH</th>
                                     </tr>
                                 </thead>
-                                { this.props.showMyFilledOrders ? showMyFilledOrders(this.props.myFilledOrders) : <Spinner type="table"/>}
+                                { this.props.showMyFilledOrders ? showMyFilledOrders(this.props) : <Spinner type="table"/>}
                             </table>
                         </Tab>
                         <Tab eventKey="orders" title="Orders">
@@ -70,7 +84,7 @@ class MyTransactions extends Component {
                                         <th>Cancel</th>
                                     </tr>
                                 </thead>
-                                { this.props.showMyOpenOrders ? showMyOpenOrders(this.props.myOpenOrders) : <Spinner type="table"/>}
+                                { this.props.showMyOpenOrders ? showMyOpenOrders(this.props) : <Spinner type="table"/>}
                             </table>
                         </Tab>
                     </Tabs>
@@ -88,11 +102,16 @@ function mapStateToProps(state) {
         myOpenOrders: myOpenOrdersSelector(state),
         showMyOpenOrders: myOpenOrdersLoadedSelector(state)
     })
+    // showingMyOpenOrders based on not only the loadedSelector but also based on if a order is currently cancelling
+    const myOpenOrdersLoaded = myOpenOrdersLoadedSelector(state);
+    const orderCancelling = orderCancellingSelector(state);
     return {
         myFilledOrders: myFilledOrdersSelector(state),
         showMyFilledOrders: myFilledOrdersLoadedSelector(state),
         myOpenOrders: myOpenOrdersSelector(state),
-        showMyOpenOrders: myOpenOrdersLoadedSelector(state)
+        showMyOpenOrders: myOpenOrdersLoaded && !orderCancelling,
+        exchange: exchangeSelector(state),
+        account: accountSelector(state),
     }
 }
 

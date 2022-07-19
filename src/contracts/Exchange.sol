@@ -113,7 +113,7 @@ contract Exchange {
         //Return ether back to original user -> is this from or not from the Token.sol smart contract?, I would 
             // assume not since it doesn't follow the 2 parameters that it should have if it was from Token.sol smart contract
         //! View this link to see address.transfer() in use: 
-            //! https://medium.com/daox/three-methods-to-transfer-funds-in-ethereum-by-means-of-solidity-5719944ed6e9 
+            //! https://medium.com/daox/three-methods-to-transfer-funds-in-ethereum-by-means-of-solidity-5719944ed6e9  
         msg.sender.transfer(_amount);
         emit Withdraw(ETHER, msg.sender, _amount, tokens[ETHER][msg.sender]);
     }

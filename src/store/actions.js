@@ -52,3 +52,18 @@ export function allOrdersLoaded(allOrders) {
         allOrders
     }
 }
+
+// in process of cancellingOrder action
+export function orderCancelling() {
+    return {
+        type: "ORDER_CANCELLING",
+    }
+}
+
+// Cancelled Order action
+export function orderCancelled(order) {
+    return {
+        type: "ORDER_CANCELLED",
+        order
+    }
+}
