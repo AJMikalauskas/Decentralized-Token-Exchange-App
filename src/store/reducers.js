@@ -6,6 +6,8 @@ function web3(state={},action) {
             return { ...state, connection: action.connection }
         case 'WEB3_ACCOUNT_LOADED':
             return { ...state, account: action.account}
+        case 'ETHER_BALANCE_LOADED':
+            return { ...state, balance: action.balance}
         default:
             return state 
     }
@@ -18,6 +20,8 @@ function token(state={},action) {
     switch(action.type) {
         case 'TOKEN_LOADED':
             return { ...state, contract: action.contract, loaded: true}
+        case 'TOKEN_BALANCE_LOADED':
+            return { ...state, balance: action.balance}
         default:
             return state 
     }
@@ -72,7 +76,22 @@ function exchange(state={},action) {
                     data
                 }
             }
-        
+
+        case 'EXCHANGE_ETHER_BALANCE_LOADED':
+            return { ...state, etherBalance: action.balance}
+        case 'EXCHANGE_TOKEN_BALANCE_LOADED':
+            return { ...state, tokenBalance: action.balance}
+        case 'BALANCES_LOADING':
+            return { ...state, balancesLoading: true}
+        case 'BALANCES_LOADED':
+            return { ...state, balancesLoading: false}
+
+        // keep track and store amount of ether being deposited
+        case 'ETHER_DEPOSIT_AMOUNT_CHANGED':
+            return { ...state, etherDepositAmount: action.amount}
+        // keep track and store amount of ether withdrawed
+        case 'ETHER_WITHDRAW_AMOUNT_CHANGED':
+            return { ...state, etherWithdrawAmount: action.amount}
         default:
             return state 
     }

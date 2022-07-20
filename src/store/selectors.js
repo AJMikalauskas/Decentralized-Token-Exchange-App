@@ -1,13 +1,17 @@
 import { get, reject, groupBy, maxBy, minBy } from "lodash";
 import moment from "moment";
 import { createSelector } from "reselect";
-import { GREEN, RED, ETHER_ADDRESS, tokens, ether } from "../helpers";
+import { GREEN, RED, ETHER_ADDRESS, tokens, ether, formatBalance } from "../helpers";
 // Can see where to get account from redux dev tools state -> web3 -> account
     // get allows us to provide a default value in case such things as web3.account doesn't exist so page won't blow up. 
     // The 1st param is the state object, 2nd param is the path such as state.web3.account but as a string, 3rd param is default value. 
 const account = state => get(state, "web3.account", "failed to access account");
 // creates accountSelectors using the above account as the 1st param and then the 2nd param as an arrow function which returns param of account
 export const accountSelector = createSelector(account, acct => acct);
+
+// Check for connection to web3 using get() lodash method and web3.connection, in redux devtools?
+const web3 = state => get(state, 'web3.connection')
+export const web3Selector = createSelector(web3, w => w); 
 
 // Need 2 selectors, 1 for each smart contract we're loading via these selectors -> can see how to get via redux dev tools
     // Default values are false, as not loaded, only loaded if get returns correctly
@@ -23,6 +27,12 @@ export const exchangeLoadedSelector = createSelector(exchangeLoaded, el => el);
 // access exchange to loadAllOrders
 const exchange = state => get(state, 'exchange.contract')
 export const exchangeSelector = createSelector(exchange, e => e);
+
+// access token to loadBalances
+const token = state => get(state, 'token.contract')
+export const tokenSelector = createSelector(token, t => t); 
+
+
 
 export const contractsLoadedSelector = createSelector(
     tokenLoaded,
@@ -383,3 +393,56 @@ export const orderCancellingSelector = createSelector(orderCancelling, status =>
     // make sure that you can't fulfill your own orders. -> similar to above 2 statements
 const orderFilling = state => get(state, 'exchange.orderFilling', false)
 export const orderFillingSelector = createSelector(orderFilling, status => status)
+
+
+// BALANCES
+
+// balancesLoading Selector, default value is true because the balances will be loading on the start of page render
+    // will ad balancesLoading property in reducers.js
+const balancesLoading = state => get(state, 'exchange.balancesLoading', true);
+export const balancesLoadingSelector = createSelector(balancesLoading, status => status);
+
+// Balance is a number, get from the web3 similar to the way the reducers are.
+    //formatBalance exlnation is in helpers.js file
+const etherBalance = state => get(state, 'web3.balance', 0)
+export const etherBalanceSelector = createSelector(
+    etherBalance,
+    (balance) => {
+        return formatBalance(balance)
+    }
+)
+
+// Simlar to above in everything but the get() gets from state.token.balance
+const tokenBalance = state => get(state, 'token.balance', 0)
+export const tokenBalanceSelector = createSelector(
+    tokenBalance,
+    (balance) => {
+        return formatBalance(balance)
+    }
+)
+
+// Simlar to above 2 in everything but the get() gets from state.exchange.etherBalance
+const exchangeEtherBalance = state => get(state, 'exchange.etherBalance', 0)
+export const exchangeEtherBalanceSelector = createSelector(
+    exchangeEtherBalance,
+    (balance) => {
+        return formatBalance(balance)
+    }
+)
+
+// Simlar to above 3 in everything but the get() gets from state.exchange.tokenBalance
+const exchangeTokenBalance = state => get(state, 'exchange.tokenBalance', 0)
+export const exchangeTokenBalanceSelector = createSelector(
+    exchangeTokenBalance,
+    (balance) => {
+        return formatBalance(balance)
+    }
+)
+
+// Created selector for tracking and storing ether deposit amount
+const etherDepositAmount = state => get(state, 'exchange.etherDepositAmount', null)
+export const etherDepositAmountSelector = createSelector(etherDepositAmount, amount => amount)
+
+// Created selector for tracking and storing ether withdraw amount
+const etherWithdrawAmount = state => get(state, 'exchange.etherWithdrawAmount', null)
+export const etherWithdrawAmountSelector = createSelector(etherWithdrawAmount, amount => amount)

@@ -12,9 +12,16 @@ import {
     orderCancelling,
     orderCancelled,
     orderFilling,
-    orderFilled
+    orderFilled,
+    etherBalanceLoaded, 
+    tokenBalanceLoaded, 
+    exchangeEtherBalanceLoaded, 
+    exchangeTokenBalanceLoaded, 
+    balancesLoaded, 
+    balancesLoading
 }
 from "./actions";
+import { ETHER_ADDRESS } from '../helpers';
 
 export const loadWeb3 = async (dispatch) => {
     //window.ethereum replaces .givenProvider() that he uses
@@ -137,6 +144,18 @@ export const subscribeToEvents = async(dispatch, exchange) => {
     console.log(event.returnValues)
     dispatch(orderFilled(event.returnValues))
   })
+
+  // Listen for Deposit event and in doing so, call the balancesLoaded to stop the Infinite Spinner due to balancesLoading
+  exchange.events.Deposit({}, (error,event) => {
+    //console.log(event.returnValues)
+    dispatch(balancesLoaded())
+  })
+
+  // Listen for Withdraw event and in doing so, call the balancesLoaded to stop the Infinite Spinner due to balancesLoading
+  exchange.events.Withdraw({}, (error,event) => {
+    //console.log(event.returnValues)
+    dispatch(balancesLoaded())
+  })
 }
 
 
@@ -149,5 +168,57 @@ export const fillOrder = (dispatch, exchange, order, account) => {
   .on('error', (error) => {
     console.log(error);
     window.alert('There was an error!')
+  })
+}
+
+// load balances for deposits/withdraws
+export const loadBalances = async (dispatch, web3, exchange, token, account) => {
+  if(typeof account !== 'undefined') {
+    // Ether balance in wallet
+    const etherBalance = await web3.eth.getBalance(account)
+    dispatch(etherBalanceLoaded(etherBalance))
+
+    // Token balance in wallet
+    const tokenBalance = await token.methods.balanceOf(account).call()
+    dispatch(tokenBalanceLoaded(tokenBalance))
+
+    // Ether balance in exchange
+    const exchangeEtherBalance = await exchange.methods.balanceOf(ETHER_ADDRESS, account).call()
+    dispatch(exchangeEtherBalanceLoaded(exchangeEtherBalance))
+
+    // Token balance in exchange
+    const exchangeTokenBalance = await exchange.methods.balanceOf(token.options.address, account).call()
+    dispatch(exchangeTokenBalanceLoaded(exchangeTokenBalance))
+
+    // Trigger all balances loaded
+    dispatch(balancesLoaded())
+  } else {
+    window.alert('Please login with MetaMask')
+  }
+}
+
+// For More explanation, check the cancelOrder() method above
+export const depositEther = (dispatch, exchange, web3, amount, account) => {
+  // send actually calls the function, not just retrieving information like .call()
+  exchange.methods.depositEther().send({ from: account,  value: web3.utils.toWei(amount, 'ether') })
+  .on('transactionHash', (hash) => {
+    dispatch(balancesLoading())
+  })
+  .on('error',(error) => {
+    console.error(error)
+    window.alert(`There was an error!`)
+  })
+}
+
+// For More explanation, check the cancelOrder() method above
+export const withdrawEther = (dispatch, exchange, web3, amount, account) => {
+  // send actually calls the function, not just retrieving information like .call()
+  exchange.methods.withdrawEther(web3.utils.toWei(amount, 'ether')).send({ from: account })
+  .on('transactionHash', (hash) => {
+    dispatch(balancesLoading())
+  })
+  .on('error',(error) => {
+    console.error(error)
+    window.alert(`There was an error!`)
   })
 }

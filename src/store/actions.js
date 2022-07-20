@@ -82,3 +82,66 @@ export function orderFilled(order) {
         order
     }
 }
+
+
+// Check if ether balance is loaded for current address/user
+export function etherBalanceLoaded(balance) {
+    return {
+        type: "ETHER_BALANCE_LOADED",
+        balance
+    }
+}
+
+// Check if token balance is loaded for current address/user
+export function tokenBalanceLoaded(balance) {
+    return {
+        type: "TOKEN_BALANCE_LOADED",
+        balance
+    }
+}
+
+// Check if ether balance on exchange is loaded for current address/user
+export function exchangeEtherBalanceLoaded(balance) {
+    return {
+        type: "EXCHANGE_ETHER_BALANCE_LOADED",
+        balance
+    }
+}
+
+// Check if token balance on exchange is loaded for current address/user
+export function exchangeTokenBalanceLoaded(balance) {
+    return {
+        type: "EXCHANGE_TOKEN_BALANCE_LOADED",
+        balance
+    }
+}
+
+// Check if all balances above are loaded
+export function balancesLoaded() {
+    return {
+        type: "BALANCES_LOADED",
+    }
+}
+
+// Check loading State of other 4 while they're loading show balancesLoading
+export function balancesLoading() {
+    return {
+        type: 'BALANCES_LOADING'
+    }
+} 
+
+// Storing and tracking value of the ether amount input of deposit
+export function etherDepositAmountChanged(amount) {
+    return {
+        type: 'ETHER_DEPOSIT_AMOUNT_CHANGED',
+        amount
+    }
+} 
+
+// Storing and tracking value of the ether amount input of withdraw
+export function etherWithdrawAmountChanged(amount) {
+    return {
+        type: 'ETHER_WITHDRAW_AMOUNT_CHANGED',
+        amount
+    }
+} 
