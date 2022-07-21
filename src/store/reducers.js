@@ -99,6 +99,52 @@ function exchange(state={},action) {
         // keep track and store amount of token withdrawed
         case 'TOKEN_WITHDRAW_AMOUNT_CHANGED':
             return { ...state, tokenWithdrawAmount: action.amount}   
+
+        // Buy Order Actions
+        case 'BUY_ORDER_AMOUNT_CHANGED':
+            return { ...state, buyOrder: {...state.buyOrder, amount: action.amount} }
+        case 'BUY_ORDER_PRICE_CHANGED':
+            return { ...state, buyOrder: {...state.buyOrder, price: action.price} }
+        case 'BUY_ORDER_MAKING':
+            return { ...state, buyOrder: {...state.buyOrder, amount: null, price: null, orderMaking: true} }
+
+        // Sell Order Actions
+        case 'SELL_ORDER_AMOUNT_CHANGED':
+            return { ...state, sellOrder: {...state.sellOrder, amount: action.amount} }
+        case 'SELL_ORDER_PRICE_CHANGED':
+            return { ...state, sellOrder: {...state.sellOrder, price: action.price} }
+        case 'SELL_ORDER_MAKING':
+            return { ...state, sellOrder: {...state.sellOrder, amount: null, price: null, orderMaking: true} }
+        
+        // ORDER MADE Finishing Action
+            // Minor explanation in google doc notes, very simple; Similar to ORDER_FILLED reducer
+        case 'ORDER_MADE':
+            // Prevent duplicate orders
+            index = state.allOrders.data.findIndex(order => order.id === action.order.id);
+            
+            // don't add order if it already exists in the allOrders
+                // if it doesn't exist yet, add to allOrders
+            if(index === -1) {
+                data = [...state.allOrders.data,action.order]
+            } else {
+                data = state.allOrders.data
+            }
+
+            return {
+                ...state,
+                allOrders: {
+                    ...state.allOrders,
+                    data
+                },
+                buyOrder: {
+                    ...state.buyOrder,
+                    orderMaking: false
+                },
+                sellOrder: {
+                    ...state.sellOrder,
+                    orderMaking: false
+                }
+            }
         default:
             return state 
     }

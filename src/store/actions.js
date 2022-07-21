@@ -161,3 +161,58 @@ export function tokenWithdrawAmountChanged(amount) {
         amount
     }
 } 
+
+// Buy Order
+
+// tracks value of input amount by amount param
+export function buyOrderAmountChanged(amount) {
+    return {
+        type: "BUY_ORDER_AMOUNT_CHANGED",
+        amount
+    }
+}
+// tracks value of input amount converted to price by price param
+export function buyOrderPriceChanged(price) {
+    return {
+        type: "BUY_ORDER_PRICE_CHANGED",
+        price
+    }
+}
+// tracks whether in the state of buyOrderMaking and will eventually add a buyOrderMade action to finish this?
+export function buyOrderMaking(price) {
+    return {
+        type: "BUY_ORDER_MAKING"
+    }
+}
+
+// finish the buyOrderMaking/sellOrderMaking by this OrderMade action which will also pass in order 
+    // and change the buyOrderMaking/sellOrderMaking state
+export function orderMade(order) {
+    return {
+        type: "ORDER_MADE",
+        order
+    }
+}
+
+// Sell Order
+    // Almost the exact same as the Buy Order actions, only change is from "buy" keyword to "sell" keyword
+// tracks value of input amount by amount param
+export function sellOrderAmountChanged(amount) {
+    return {
+        type: "SELL_ORDER_AMOUNT_CHANGED",
+        amount
+    }
+}
+// tracks value of input amount converted to price by price param
+export function sellOrderPriceChanged(price) {
+    return {
+        type: "SELL_ORDER_PRICE_CHANGED",
+        price
+    }
+}
+// tracks whether in the state of sellOrderMaking and will eventually end by orderMade() action.
+export function sellOrderMaking(price) {
+    return {
+        type: "SELL_ORDER_MAKING"
+    }
+}

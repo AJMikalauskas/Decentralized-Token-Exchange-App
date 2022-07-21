@@ -454,3 +454,11 @@ export const tokenDepositAmountSelector = createSelector(tokenDepositAmount, amo
 // Created selector for tracking and storing token withdraw amount
 const tokenWithdrawAmount = state => get(state, 'exchange.tokenWithdrawAmount', null)
 export const tokenWithdrawAmountSelector = createSelector(tokenWithdrawAmount, amount => amount)
+
+// Tracks the state.exchange.buyOrder from reducers.js
+const buyOrder = state => get(state,'exchange.buyOrder', {})
+export const buyOrderSelector = createSelector(buyOrder, order => order)
+
+// Tracks the state.exchange.sellOrder from reducers.js
+const sellOrder = state => get(state,'exchange.sellOrder', {})
+export const sellOrderSelector = createSelector(sellOrder, order => order)
