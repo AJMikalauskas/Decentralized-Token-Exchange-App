@@ -92,6 +92,13 @@ function exchange(state={},action) {
         // keep track and store amount of ether withdrawed
         case 'ETHER_WITHDRAW_AMOUNT_CHANGED':
             return { ...state, etherWithdrawAmount: action.amount}
+
+        // keep track and store amount of token being deposited
+        case 'TOKEN_DEPOSIT_AMOUNT_CHANGED':
+            return { ...state, tokenDepositAmount: action.amount}
+        // keep track and store amount of token withdrawed
+        case 'TOKEN_WITHDRAW_AMOUNT_CHANGED':
+            return { ...state, tokenWithdrawAmount: action.amount}   
         default:
             return state 
     }

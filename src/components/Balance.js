@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { Tab, Tabs } from "react-bootstrap";
 import { connect } from "react-redux";
-import { depositEther, loadBalances, withdrawEther } from "../store/interactions";
+import { depositEther, loadBalances, withdrawEther, depositToken, withdrawToken } from "../store/interactions";
 import {
   web3Selector,
   exchangeSelector,
@@ -14,8 +14,11 @@ import {
   balancesLoadingSelector,
   etherDepositAmountSelector,
   etherWithdrawAmountSelector,
+  tokenDepositAmountSelector,
+  tokenWithdrawAmountSelector
 } from "../store/selectors";
-import { etherDepositAmountChanged, etherWithdrawAmountChanged } from "../store/actions";
+import { etherDepositAmountChanged, etherWithdrawAmountChanged, 
+    tokenDepositAmountChanged, tokenWithdrawAmountChanged } from "../store/actions";
 import Spinner from "./Spinner";
 
 const showForm = (props) => {
@@ -31,7 +34,9 @@ const showForm = (props) => {
     token,
     account,
     web3,
-    etherWithdrawAmount
+    etherWithdrawAmount,
+    tokenDepositAmount,
+    tokenWithdrawAmount
   } = props;
   const similarJSXCodeInBothDepositAndWithdraw = (keyWord) => {
     //let keyWordFnName = keyWord + "Ether";
@@ -106,6 +111,18 @@ const showForm = (props) => {
           className="row"
           onSubmit={(event) => {
             event.preventDefault();
+            if(keyWord === "Deposit") {
+                depositToken(
+                  dispatch,
+                  exchange,
+                  web3,
+                  token,
+                  tokenDepositAmount,
+                  account
+                );
+                } else {
+                withdrawToken(dispatch,exchange,web3,token,tokenWithdrawAmount, account)
+                }
             console.log("form submitting...");
           }}
         >
@@ -113,7 +130,14 @@ const showForm = (props) => {
             <input
               type="number"
               placeholder="MTN Amount"
-              onChange={(e) => console.log("amount changed...")}
+              onChange={(e) => {
+                if(keyWord === "Deposit") {
+                    dispatch(tokenDepositAmountChanged(e.target.value))
+                } else {
+                    dispatch(tokenWithdrawAmountChanged(e.target.value))
+                }
+              }
+            }  
               className="form-control form-control-sm bg-dark text-white"
               required
             />
@@ -186,6 +210,8 @@ function mapStateToProps(state) {
     showForm: !balancesLoading,
     etherDepositAmount: etherDepositAmountSelector(state),
     etherWithdrawAmount: etherWithdrawAmountSelector(state),
+    tokenDepositAmount: tokenDepositAmountSelector(state),
+    tokenWithdrawAmount: tokenWithdrawAmountSelector(state),
   };
 }
 

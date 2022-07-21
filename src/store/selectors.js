@@ -446,3 +446,11 @@ export const etherDepositAmountSelector = createSelector(etherDepositAmount, amo
 // Created selector for tracking and storing ether withdraw amount
 const etherWithdrawAmount = state => get(state, 'exchange.etherWithdrawAmount', null)
 export const etherWithdrawAmountSelector = createSelector(etherWithdrawAmount, amount => amount)
+
+// Created selector for tracking and storing token deposit amount
+const tokenDepositAmount = state => get(state, 'exchange.tokenDepositAmount', null)
+export const tokenDepositAmountSelector = createSelector(tokenDepositAmount, amount => amount)
+
+// Created selector for tracking and storing token withdraw amount
+const tokenWithdrawAmount = state => get(state, 'exchange.tokenWithdrawAmount', null)
+export const tokenWithdrawAmountSelector = createSelector(tokenWithdrawAmount, amount => amount)

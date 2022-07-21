@@ -199,6 +199,7 @@ export const loadBalances = async (dispatch, web3, exchange, token, account) => 
 
 // For More explanation, check the cancelOrder() method above
 export const depositEther = (dispatch, exchange, web3, amount, account) => {
+  console.log(amount);
   // send actually calls the function, not just retrieving information like .call()
   exchange.methods.depositEther().send({ from: account,  value: web3.utils.toWei(amount, 'ether') })
   .on('transactionHash', (hash) => {
@@ -214,6 +215,39 @@ export const depositEther = (dispatch, exchange, web3, amount, account) => {
 export const withdrawEther = (dispatch, exchange, web3, amount, account) => {
   // send actually calls the function, not just retrieving information like .call()
   exchange.methods.withdrawEther(web3.utils.toWei(amount, 'ether')).send({ from: account })
+  .on('transactionHash', (hash) => {
+    dispatch(balancesLoading())
+  })
+  .on('error',(error) => {
+    console.error(error)
+    window.alert(`There was an error!`)
+  })
+}
+
+// For More explanation, check the cancelOrder() method above
+export const depositToken = (dispatch, exchange, web3, token, amount, account) => {
+  console.log(amount)
+  //converts amount to wei/ether
+  amount = web3.utils.toWei(amount,'ether')
+  console.log(amount)
+  // send actually calls the function, not just retrieving information like .call()
+  token.methods.approve(exchange.options.address, amount).send({ from: account })
+  .on('transactionHash', (hash) => {
+    exchange.methods.depositToken(token.options.address, amount).send({ from: account })
+      .on('transactionHash', (hash) => {
+        dispatch(balancesLoading())
+      })
+      .on('error',(error) => {
+        console.error(error)
+        window.alert(`There was an error!`)
+      })
+  })
+}
+
+// For More explanation, check the cancelOrder() method above
+export const withdrawToken = (dispatch, exchange, web3, token, amount, account) => {
+  // send actually calls the function, not just retrieving information like .call()
+  exchange.methods.withdrawToken(token.options.address, web3.utils.toWei(amount, 'ether')).send({ from: account })
   .on('transactionHash', (hash) => {
     dispatch(balancesLoading())
   })

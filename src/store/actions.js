@@ -145,3 +145,19 @@ export function etherWithdrawAmountChanged(amount) {
         amount
     }
 } 
+
+// Storing and tracking value of the token amount input of deposit
+export function tokenDepositAmountChanged(amount) {
+    return {
+        type: 'TOKEN_DEPOSIT_AMOUNT_CHANGED',
+        amount
+    }
+} 
+
+// Storing and tracking value of the token amount input of withdraw
+export function tokenWithdrawAmountChanged(amount) {
+    return {
+        type: 'TOKEN_WITHDRAW_AMOUNT_CHANGED',
+        amount
+    }
+} 
