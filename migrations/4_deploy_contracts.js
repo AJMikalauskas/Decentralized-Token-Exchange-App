@@ -4,7 +4,7 @@ const Exchange = artifacts.require("Exchange");
 module.exports = async function(deployer) {
     // gets all accounts from  ganache by web3 
         // how do we know the feeAccount is the [0] of accounts?
-    const accounts = await web3.eth.getAccounts()
+    const accounts = await web3.eth.getAccounts();
 
     await deployer.deploy(Token);
 

@@ -1,8 +1,14 @@
 require('babel-register');
 require('babel-polyfill');
 require('dotenv').config();
-const HDWalletProvider = require('truffle-hdwallet-provider-privkey');
-const privateKeys = process.env.PRIVATE_KEYS || ""
+const HDWalletProvider = require('@truffle/hdwallet-provider');
+//const MNEMONIC = '9a17e148f3874f608bdf112062e386b3';
+const privateKeys = process.env.PRIVATE_KEYS || "";
+const infuraKey = "6902d8dce8dc49508dad8009b98ad47f";
+
+const fs = require("fs");
+//patrol ticket vacuum duty frost ritual century explain suspect champion olympic rocket?
+const mnemonic = fs.readFileSync(".secret").toString().trim();
 
 
 module.exports = {
@@ -25,22 +31,31 @@ module.exports = {
     development: {
      host: "127.0.0.1",     // Localhost (default: none)
      port: 7545,            // Standard Ethereum port (default: none)
-     network_id: "*",       // Any network (default: none)
+     network_id: "*"       // Any network (default: none)
+    // websockets: true
     },
     // public blockchain where ehter is worth nothing, cna deploy smart contracts to here
-    kovan: {
-      provider: function() {
+    ropsten: {
+      provider: () =>  
         // HDWalletProvider is what generates a wllaet from private key(s) from accounts in ganache
-        return new HDWalletProvider(
+          new HDWalletProvider(
           // Private Key -> split the private keys by a comma -> array of account private keys
-          privateKeys.split(','),
+         privateKeys.split(','),
+          //API KEY SECRET
+          //MNEMONIC,
+          //mnemonic,
           // Url to an Ethereum Node
-          `https://kovan.infura.io/v3/${process.env.INFURA_API_KEY}`
-        )
-      },
-      gas: 5000000,
-      gasPrice: 25000000000,
-      network_id: 42
+         `wss://ropsten.infura.io/ws/v3/${infuraKey}`
+        ),
+      network_id: 3,
+     gas: 5000000,
+     gasPrice: 25000000000, 
+      confirmations: 2,
+      timeoutBlocks: 20000,
+      skipDryRun: true,
+      websocket: true,
+      //timeoutBlocks: 50000,
+      networkCheckTimeout: 100000000
     },
   },
   // Redirects smart contracts to work in these 2 contract directories, 
