@@ -4,11 +4,11 @@ require('dotenv').config();
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 //const MNEMONIC = '9a17e148f3874f608bdf112062e386b3';
 const privateKeys = process.env.PRIVATE_KEYS || "";
-const infuraKey = "6902d8dce8dc49508dad8009b98ad47f";
+const infuraKey = process.env.INFURA_API_KEY;
 
 const fs = require("fs");
 //patrol ticket vacuum duty frost ritual century explain suspect champion olympic rocket?
-const mnemonic = fs.readFileSync(".secret").toString().trim();
+//const mnemonic = fs.readFileSync(".secret").toString().trim();
 
 
 module.exports = {
